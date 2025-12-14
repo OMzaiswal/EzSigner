@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { DwonloadOptions } from "./DownloadOptions";
+import { useSignature } from "../context/SignatureContext";
 
 export const SignatureTyped = () => {
 
@@ -8,6 +9,8 @@ export const SignatureTyped = () => {
     const [fontSize, setFontSize] = useState(50);
     const [fontWeight, setFontWeight] = useState('normal');
     const [color, setColor] = useState('black');
+
+    const { setSignatureUrl } = useSignature();
 
     const fonts = [
         "Arial",
@@ -60,6 +63,7 @@ export const SignatureTyped = () => {
         const time = new Date().getTime();
 
         const dataUrl = exportCanvas.toDataURL(`image/${format}`);
+        setSignatureUrl(dataUrl);
 
         const link = document.createElement('a');
         link.href = dataUrl;

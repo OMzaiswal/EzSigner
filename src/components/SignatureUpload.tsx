@@ -1,11 +1,14 @@
 import { useRef, useState } from "react"
 import { DwonloadOptions } from "./DownloadOptions";
+import { useSignature } from "../context/SignatureContext";
 
 export const SignatureUpload = () => {
 
     const [uploadUrl, setUploadUrl] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+    const { setSignatureUrl } = useSignature();
+ 
     const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if(!file) return;
@@ -45,6 +48,7 @@ export const SignatureUpload = () => {
 
             ctx.drawImage(img, 0, 0, width, height);
             const url = exportCanvas.toDataURL(`image/${format}`);
+            setSignatureUrl(url);
 
             const time = Date.now();
 

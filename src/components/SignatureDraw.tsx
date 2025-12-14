@@ -1,12 +1,15 @@
 import { useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { DwonloadOptions } from "./DownloadOptions";
+import { useSignature } from "../context/SignatureContext";
 
 
 export const SignatureDraw = () => {
 
     const sigRef = useRef<any>(null);
     const [drawUrl, setDrawUrl] = useState<string | null>(null);
+
+    const { setSignatureUrl } = useSignature();
 
     const clear = () => {
         sigRef.current.clear();
@@ -51,6 +54,7 @@ export const SignatureDraw = () => {
 
             ctx.drawImage(img, 0, 0, width, height);
             const url = exportCanvas.toDataURL(`image/${format}`);
+            setSignatureUrl(url);
 
             const link = document.createElement('a');
             link.href = url;
