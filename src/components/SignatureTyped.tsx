@@ -5,7 +5,7 @@ import { useSignature } from "../context/SignatureContext";
 export const SignatureTyped = () => {
 
     const [textSign, setTextSign] = useState('');
-    const [fontFamily, setFontFamily] = useState('Arial');
+    const [fontFamily, setFontFamily] = useState('Dancing Script');
     const [fontSize, setFontSize] = useState(50);
     const [fontWeight, setFontWeight] = useState('normal');
     const [color, setColor] = useState('black');
@@ -33,6 +33,9 @@ export const SignatureTyped = () => {
     ctx.fillStyle = color;
     ctx.font = `${fontWeight} ${fontSize}px '${fontFamily}'`
     ctx.fillText(textSign, 40, 120);
+
+    const url = canvas.toDataURL('image/png');
+    setSignatureUrl(url);
 
     }, [textSign, fontFamily, fontSize, fontWeight, color])
 
@@ -63,7 +66,6 @@ export const SignatureTyped = () => {
         const time = new Date().getTime();
 
         const dataUrl = exportCanvas.toDataURL(`image/${format}`);
-        setSignatureUrl(dataUrl);
 
         const link = document.createElement('a');
         link.href = dataUrl;
