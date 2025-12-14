@@ -54,7 +54,7 @@ export const SignatureDraw = () => {
 
             const link = document.createElement('a');
             link.href = url;
-            const time = new Date().getTime();
+            const time = Date.now();
             link.download = `signature_${width}x${height}_${time}.${format}`;
             link.click();
         }
@@ -68,7 +68,7 @@ export const SignatureDraw = () => {
                 canvasProps={{
                     width: 800,
                     height: 300,
-                    className: 'border rounded bg-white shadow'
+                    className: 'rounded bg-white shadow'
                 }}
             />
             <div className="space-x-4">
@@ -90,7 +90,7 @@ export const SignatureDraw = () => {
                     <img
                     src={drawUrl}
                     alt="Drawn Signature"
-                    className="max-h-40 border rounded shadow mt-4 bg-white"
+                    className="max-h-40 rounded shadow mt-4 bg-white"
                     />
                     <DwonloadOptions downloadSignature={downloadSignature} />
                </div>

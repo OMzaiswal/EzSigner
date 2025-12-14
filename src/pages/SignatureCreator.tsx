@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { SignatureTyped } from "../components/SignatureTyped"
 import { SignatureDraw } from "../components/SignatureDraw";
+import { SignatureUpload } from "../components/SignatureUpload";
 
 export const SignatureCreator = () => {
 
@@ -41,6 +42,8 @@ export const SignatureCreator = () => {
                 {mode === 'typed' && <SignatureTyped />}
 
                 {mode === 'draw' && <SignatureDraw  />}
+
+                {mode === 'upload' && <SignatureUpload />}
 
                 
             </div>
