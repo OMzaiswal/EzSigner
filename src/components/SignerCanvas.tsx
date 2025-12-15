@@ -4,10 +4,10 @@ import useImage from "use-image";
 import type { SignaturePlacement } from "../types"; 
 
 type Props = {
-  pageUrl: string; 
-  signatureUrl: string; 
-  width: number;
-  height: number;
+  pageUrl: string;
+  signatureUrl: string;
+  pageWidth: number;
+  pageHeight: number;
   onSave: (placement: SignaturePlacement) => void;
   onCancel: () => void;
 };
@@ -15,8 +15,8 @@ type Props = {
 export const SignerCanvas = ({
   pageUrl,
   signatureUrl,
-  width,
-  height,
+  pageWidth,
+  pageHeight,
   onSave,
   onCancel,
 }: Props) => {
@@ -51,14 +51,14 @@ export const SignerCanvas = ({
     <div className="flex flex-col gap-4 items-center">
       <Stage
         ref={stageRef}
-        width={width}
-        height={height}
+        width={pageWidth}
+        height={pageHeight}
         className="border rounded shadow bg-white"
       >
         <Layer>
           {/* background page */}
           {pageImage && (
-            <KonvaImage image={pageImage} width={width} height={height} />
+            <KonvaImage image={pageImage} width={pageWidth} height={pageHeight} />
           )}
 
           {/* signature */}

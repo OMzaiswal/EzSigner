@@ -1,6 +1,12 @@
 import { useEffect, useRef } from "react";
 
-export const ImageViewer = ({ file }: { file: File }) => {
+export const ImageViewer = ({
+  file,
+  onImageReady,
+}: {
+  file: File;
+  onImageReady: (url: string, width: number, height: number) => void;
+}) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -13,7 +19,10 @@ export const ImageViewer = ({ file }: { file: File }) => {
     img.onload = () => {
       canvas.width = img.width;
       canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, img.width, img.height);
+
+      const url = canvas.toDataURL("image/png");
+      onImageReady(url, img.width, img.height);
     };
 
     img.src = URL.createObjectURL(file);

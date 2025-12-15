@@ -1,137 +1,276 @@
-import { useState } from "react";
-import { useSignature } from "../context/SignatureContext";
+import { useRef, useState } from "react";
 import { PdfPageRenderer } from "../components/PdfPageRenderer";
-import { ImagePageRenderer } from "../components/ImagePageRenderer";
+import { ImageViewer } from "../components/ImageViewer";
 import { SignerCanvas } from "../components/SignerCanvas";
-import { exportSignedPdf } from "../utils/exportPdf";
-import { exportSignedImage } from "../utils/exportImage";
+import { PreviewWithOverlay } from "../components/PreviewWithOverlay";
+import { useSignature } from "../context/SignatureContext";
 import type { SignaturePlacement } from "../types";
+import { Link } from "react-router-dom";
 
 export const DocSigner = () => {
-  const { signatureUrl } = useSignature();
-
   const [file, setFile] = useState<File | null>(null);
-  const [pageCanvasUrl, setPageCanvasUrl] = useState<string | null>(null);
-  const [numPages, setNumPages] = useState<number>(1);
+
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Page preview state
   const [currentPage, setCurrentPage] = useState(0);
+  const [numPages, setNumPages] = useState(0);
 
-  const [mode, setMode] = useState<"preview" | "sign">("preview");
+  // Switch betweenPreview and Signing Mode
+  const [isSigning, setIsSigning] = useState(false);
 
+  // Canvas page URL + dimensions
+  const [pageUrl, setPageUrl] = useState<string | null>(null);
+  const [pageWidth, setPageWidth] = useState<number>(0);
+  const [pageHeight, setPageHeight] = useState<number>(0);
+
+  // One signature placement per page index
   const [placements, setPlacements] = useState<
     Record<number, SignaturePlacement>
   >({});
 
-  const handleFileSelect = async (e: any) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
+  const { signatureUrl } = useSignature();
 
+  const handleFile = (f: File) => {
     setFile(f);
-    setCurrentPage(0);
+    setIsSigning(false);
+    setPageUrl(null);
     setPlacements({});
+    setCurrentPage(0);
   };
 
-  const handlePageRendered = (canvas: HTMLCanvasElement) => {
-    setPageCanvasUrl(canvas.toDataURL("image/png"));
+  // Page rendered callback (from PDF or Image renderer)
+  const handlePageReady = (url: string, width: number, height: number) => {
+    setPageUrl(url);
+    setPageWidth(width);
+    setPageHeight(height);
   };
 
+  // Save signature placement from SignerCanvas
   const handleSavePlacement = (placement: SignaturePlacement) => {
     setPlacements((prev) => ({
       ...prev,
       [currentPage]: placement,
     }));
-    setMode("preview");
+    setIsSigning(false);
   };
 
-  const exportDocument = async () => {
-    if (!file || !signatureUrl) return;
-
-    if (file.type === "application/pdf") {
-      await exportSignedPdf(file, placements, signatureUrl);
-    } else {
+  const handleExport = async () => {
+    if (!file || !pageUrl) return;
+  
+    // --- IMAGE EXPORT ---
+    if (file.type.startsWith("image/")) {
+      const img = new Image();
+      img.src = pageUrl;
+  
+      await new Promise((res) => (img.onload = res));
+  
+      const exportCanvas = document.createElement("canvas");
+      exportCanvas.width = pageWidth;
+      exportCanvas.height = pageHeight;
+  
+      const ctx = exportCanvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0);
+  
+      // draw signature if exists
       const placement = placements[currentPage];
-      if (!placement) alert("No signature placement!");
-      else await exportSignedImage(file, placement, signatureUrl);
+      if (placement && signatureUrl) {
+        const sig = new Image();
+        sig.src = signatureUrl;
+        await new Promise((res) => (sig.onload = res));
+        ctx.drawImage(sig, placement.x, placement.y, placement.width, placement.height);
+      }
+  
+      const finalUrl = exportCanvas.toDataURL("image/png");
+  
+      const a = document.createElement("a");
+      a.href = finalUrl;
+      a.download = "signed_image.png";
+      a.click();
+  
+      return;
+    }
+  
+    // --- PDF EXPORT ---
+    if (file.type === "application/pdf") {
+      const bytes = await file.arrayBuffer();
+      const { PDFDocument } = await import("pdf-lib");
+      const pdfDoc = await PDFDocument.load(bytes);
+  
+      const sigImageBytes = signatureUrl
+        ? await fetch(signatureUrl).then((r) => r.arrayBuffer())
+        : null;
+  
+      let sigPng;
+      if (sigImageBytes) {
+        sigPng = await pdfDoc.embedPng(sigImageBytes);
+      }
+  
+      for (let i = 0; i < numPages; i++) {
+        const placement = placements[i];
+        if (!placement || !sigPng) continue;
+  
+        const page = pdfDoc.getPage(i);
+        const { width, height } = page.getSize();
+  
+        // Convert HTML coordinates to PDF coordinates
+        const pdfX = placement.x;
+        const pdfY = height - placement.y - placement.height;
+  
+        page.drawImage(sigPng, {
+          x: pdfX,
+          y: pdfY,
+          width: placement.width,
+          height: placement.height,
+        });
+      }
+  
+      const pdfBytes = await pdfDoc.save();
+  
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+  
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "signed_document.pdf";
+      a.click();
+  
+      URL.revokeObjectURL(url);
     }
   };
+  
 
   return (
-    <div className="p-8 flex flex-col items-center gap-6">
-      <h1 className="text-3xl font-bold">Document Signer</h1>
+    <div className="p-8 flex flex-col items-center">
+      <h1 className="text-3xl font-bold mb-8">Document Signer</h1>
 
-      <div className="flex gap-4 items-center">
-        <input
-          type="file"
-          accept="application/pdf, image/*"
-          onChange={handleFileSelect}
-          className="border p-2 rounded"
-        />
+      {/* Upload Section */}
+      <div className="flex justify-around w-full max-w-5xl items-center mb-6">
+        <div className="space-x-2">
+          <input
+            type="file"
+            accept="application/pdf, image/png, image/jpeg"
+            ref={inputRef}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleFile(f);
+            }}
+            className="border rounded p-2"
+          />
+          <button
+            className="border border-gray-200 rounded-lg p-2 mb-2 hover:bg-red-50 text-red-400 hover:text-red-600"
+            onClick={() => {
+              setFile(null);
+              if(inputRef.current) {
+                inputRef.current.value = '';
+              }
+            }}
+          >Remove</button>
+        </div>
 
-        <span className="text-lg">
-          {signatureUrl ? "Signature Ready" : "No Signature Yet"}
+        <span className="text-blue-600 font-semibold">
+          {signatureUrl ? "Signature Loaded" : "No Signature Added"}
         </span>
       </div>
 
-      {file && mode === "preview" && (
-        <div className="flex flex-col items-center gap-4">
-          {file.type === "application/pdf" ? (
+      {/* If nothing uploaded */}
+      {!file &&
+        <p className="text-gray-700 text-lg">Upload a document to continue.</p>
+      }
+
+
+      {/* Preview Mode */}
+      {!isSigning && file && (
+        <div className="space-y-4">
+
+          {/* Background PDF page loader (hidden) */}
+          {file.type === "application/pdf" && (
             <PdfPageRenderer
               file={file}
               pageIndex={currentPage}
-              onPageRendered={handlePageRendered}
+              onPageRendered={handlePageReady}
+              onTotalPages={(n) => setNumPages(n)}
             />
-          ) : (
-            <ImagePageRenderer file={file} onRendered={handlePageRendered} />
           )}
 
-          <div className="flex gap-4 mt-2">
-            <button
-              disabled={currentPage === 0}
-              onClick={() => setCurrentPage((p) => p - 1)}
-              className="px-4 py-2 bg-gray-200 rounded"
-            >
-              Prev
-            </button>
+          {/* Background image loader (hidden) */}
+          {file.type.startsWith("image/") && (
+            <ImageViewer
+              file={file}
+              onImageReady={handlePageReady}
+            />
+          )}
 
+          {/* Visible preview with overlays */}
+          {pageUrl && (
+            <PreviewWithOverlay
+              pageUrl={pageUrl}
+              pageWidth={pageWidth}
+              pageHeight={pageHeight}
+              signatureUrl={signatureUrl}
+              placement={placements[currentPage]}
+            />
+          )}
+
+          {/* Pagination */}
+          {file.type === "application/pdf" && numPages > 1 && (
+            <div className="flex gap-4 justify-center mt-2">
+              <button
+                disabled={currentPage === 0}
+                onClick={() => setCurrentPage((p) => p - 1)}
+                className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+              >
+                Prev
+              </button>
+
+              <button
+                disabled={currentPage === numPages - 1}
+                onClick={() => setCurrentPage((p) => p + 1)}
+                className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          )}
+
+          {/* Add Signature */}
+          {signatureUrl ? (
             <button
-              onClick={() => {
-                if (!signatureUrl) return alert("No signature available!");
-                setMode("sign");
-              }}
               className="px-4 py-2 bg-blue-500 text-white rounded"
+              onClick={() => setIsSigning(true)}
             >
               Add Signature
             </button>
+          ) : (
+            <div>
+              <p className="text-red-500 text-lg">You need to Create Signature first, to add on document</p>
+              <Link to='/signature' className="text-blue-400 underline">Click here to create</Link>
+            </div>
+          )}
 
+          {/* Export */}
+          {pageUrl && (
             <button
-              onClick={exportDocument}
-              className="px-4 py-2 bg-green-600 text-white rounded"
+              className="px-4 py-2 bg-green-500 text-white rounded"
+              onClick={handleExport}
             >
-              Export
+              Export Signed Document
             </button>
+          )}
 
-            <button
-              disabled={
-                file.type === "application/pdf"
-                  ? currentPage === numPages - 1
-                  : true
-              }
-              onClick={() => setCurrentPage((p) => p + 1)}
-              className="px-4 py-2 bg-gray-200 rounded"
-            >
-              Next
-            </button>
-          </div>
         </div>
       )}
 
-      {file && mode === "sign" && pageCanvasUrl && signatureUrl && (
+
+      {/* Signing Mode */}
+      {isSigning && pageUrl && signatureUrl && (
         <SignerCanvas
-          pageUrl={pageCanvasUrl}
+          pageUrl={pageUrl}
+          pageWidth={pageWidth}
+          pageHeight={pageHeight}
           signatureUrl={signatureUrl}
-          width={800}
-          height={1000}
           onSave={handleSavePlacement}
-          onCancel={() => setMode("preview")}
+          onCancel={() => setIsSigning(false)}
         />
       )}
     </div>

@@ -26,6 +26,7 @@ export const SignatureDraw = () => {
         const url = rawCanvas.toDataURL('image/png');
 
         setDrawUrl(url);
+        setSignatureUrl(url);
     }
 
     const downloadSignature = (
@@ -54,7 +55,6 @@ export const SignatureDraw = () => {
 
             ctx.drawImage(img, 0, 0, width, height);
             const url = exportCanvas.toDataURL(`image/${format}`);
-            setSignatureUrl(url);
 
             const link = document.createElement('a');
             link.href = url;

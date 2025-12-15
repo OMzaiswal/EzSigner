@@ -8,9 +8,9 @@ export const SignatureCreator = () => {
     const [mode, setMode] = useState<'typed' | 'draw' | 'upload'>('typed');
 
     return (
-        <div className="m-8">
+        <div className="m-8 borde flex gap-40">
             {/* SideBar */}
-            <div className="w-50 p-4 mt-10 bg-gray-200 rounded-lg">
+            <div className="w-60 h-60 p-4 bg-gray-200 rounded-lg flex justify-center items-center">
                 <ul className="space-y-4 text-lg">
                     <li>
                         <button

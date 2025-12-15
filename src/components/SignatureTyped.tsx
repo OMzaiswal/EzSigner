@@ -74,7 +74,7 @@ export const SignatureTyped = () => {
     };
 
     return (
-        <div>
+        <div className="">
             <div className="flex gap-4 p-4 h-30">
                 <div className="flex flex-col">
                     <label htmlFor="signText" className="text-sm text-gray-600">Signature Text</label>
