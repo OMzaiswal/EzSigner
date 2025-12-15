@@ -126,20 +126,22 @@ export const DocSigner = () => {
       }
   
       const pdfBytes = await pdfDoc.save();
-  
-      const arrayBuffer = pdfBytes.buffer.slice(
-        pdfBytes.byteOffset,
-        pdfBytes.byteOffset + pdfBytes.byteLength
-      );
-      
-      const blob = new Blob([arrayBuffer], { type: "application/pdf" });
+
+      const arrayBuffer = new ArrayBuffer(pdfBytes.length);
+      const view = new Uint8Array(arrayBuffer);
+      view.set(pdfBytes);
+
+      const blob = new Blob([arrayBuffer], {
+        type: "application/pdf",
+      });
+
       const url = URL.createObjectURL(blob);
-      
+
       const a = document.createElement("a");
       a.href = url;
       a.download = "signed_document.pdf";
       a.click();
-      
+
       URL.revokeObjectURL(url);
     }
   };

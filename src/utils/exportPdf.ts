@@ -26,11 +26,19 @@ export async function exportSignedPdf(
   }
 
   const finalBytes = await pdfDoc.save();
-  const blob = new Blob([finalBytes], { type: "application/pdf" });
+
+  const safeBuffer = new ArrayBuffer(finalBytes.length);
+  new Uint8Array(safeBuffer).set(finalBytes);
+
+  const blob = new Blob([safeBuffer], {
+    type: "application/pdf",
+  });
 
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = "signed_document.pdf";
   link.click();
+
+  URL.revokeObjectURL(url);
 }
