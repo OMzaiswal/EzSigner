@@ -111,7 +111,7 @@ export const DocSigner = () => {
         if (!placement || !sigPng) continue;
   
         const page = pdfDoc.getPage(i);
-        const { width, height } = page.getSize();
+        const { height } = page.getSize();
   
         // Convert HTML coordinates to PDF coordinates
         const pdfX = placement.x;
@@ -127,14 +127,19 @@ export const DocSigner = () => {
   
       const pdfBytes = await pdfDoc.save();
   
-      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const arrayBuffer = pdfBytes.buffer.slice(
+        pdfBytes.byteOffset,
+        pdfBytes.byteOffset + pdfBytes.byteLength
+      );
+      
+      const blob = new Blob([arrayBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
-  
+      
       const a = document.createElement("a");
       a.href = url;
       a.download = "signed_document.pdf";
       a.click();
-  
+      
       URL.revokeObjectURL(url);
     }
   };
